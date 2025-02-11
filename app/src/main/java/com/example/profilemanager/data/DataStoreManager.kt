@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -29,6 +30,9 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "pr
 
 class DataStoreManager(private val context: Context) {
     companion object {
+        private val Context.dataStore: DataStore<Preferences> by preferencesDataStore("app_prefs")
+        val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
+        val PROFILE_KEY = stringPreferencesKey("profile_key")
         private val PROFILE_ID_COUNTER = intPreferencesKey("profile_id_counter")
         fun profileIdKey(id: Int) = intPreferencesKey("profile_id_$id")
         fun profileNameKey(id: Int) = stringPreferencesKey("profile_name_$id")
@@ -38,6 +42,17 @@ class DataStoreManager(private val context: Context) {
         fun profileLastCheckedKey(id: Int) = stringPreferencesKey("profile_last_checked_$id")
         fun profileOrderKey(id: Int) = intPreferencesKey("profile_order_$id")
         fun profileIconNameKey(id: Int) = stringPreferencesKey("profile_icon_name_$id")
+    }
+
+    val isDarkMode: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[DARK_MODE_KEY] ?: false
+        }
+
+    suspend fun setDarkMode(isDarkMode: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[DARK_MODE_KEY] = isDarkMode
+        }
     }
 
     private val _connectionStateFlow = MutableStateFlow<List<Profile>>(emptyList())
