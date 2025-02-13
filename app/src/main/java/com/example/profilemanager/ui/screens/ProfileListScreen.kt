@@ -18,9 +18,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
@@ -38,8 +40,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,13 +72,23 @@ fun ProfileListScreen(navController: NavController) {
 
     var isEditMode by remember { mutableStateOf(false) }
     var allExpanded by remember { mutableStateOf(false) }
+    val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Profiles") },
                 actions = {
-                    TextButton(onClick = { allExpanded = !allExpanded }) {
+                    TextButton(onClick = {
+                        allExpanded = !allExpanded
+                        if (!allExpanded) {
+                            expandedStates.clear()
+                        } else {
+                            profiles.forEach { profile ->
+                                expandedStates[profile.id] = true
+                            }
+                        }
+                    }) {
                         Text(
                             text = if (allExpanded) "Collapse All" else "Expand All",
                             color = MaterialTheme.colorScheme.onSurface
@@ -123,11 +135,15 @@ fun ProfileListScreen(navController: NavController) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(profiles) { profile ->
+                    items(profiles, key = { it.id }) { profile ->
                         ProfileItem(
                             profile = profile,
                             isEditMode = isEditMode,
                             navController = navController,
+                            isExpanded = expandedStates[profile.id] ?: false,
+                            onExpandChange = { expanded ->
+                                expandedStates[profile.id] = expanded
+                            },
                             allExpanded = allExpanded,
                             onDelete = {
                                 coroutineScope.launch {
@@ -141,41 +157,39 @@ fun ProfileListScreen(navController: NavController) {
         }
     }
 }
+
 @Composable
 fun ProfileItem(
     profile: Profile,
     isEditMode: Boolean,
     navController: NavController,
+    isExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
     allExpanded: Boolean,
     onDelete: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
-    var isExpanded by remember(profile.id, allExpanded) {
-        mutableStateOf(false)
-    }
-    val isExpandedState by remember(allExpanded, isExpanded) {
-        derivedStateOf {
-            allExpanded || isExpanded
-        }
-    }
-    val rotationState by animateFloatAsState(targetValue = if (isExpandedState) 180f else 0f, label = "rotationState")
+    val isExpandedState = isExpanded
+
+    val rotationState by animateFloatAsState(
+        targetValue = if (isExpandedState) 180f else 0f,
+        label = "rotationState"
+    )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .clickable {
-                if (!allExpanded) {
-                    isExpanded = !isExpanded
-                }
-            },
+            .clip(RoundedCornerShape(16.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable {
+                    onExpandChange(!isExpanded)
+                }
                 .animateContentSize()
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
@@ -187,18 +201,22 @@ fun ProfileItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Connection status indicator
+                    val connectionIcon = when (profile.connectionState) {
+                        ConnectionState.CONNECTED -> Icons.Filled.CheckCircle
+                        ConnectionState.NOT_CONNECTED -> Icons.Filled.Error
+                        else -> Icons.Filled.Error
+                    }
                     val connectionColor = when (profile.connectionState) {
                         ConnectionState.CONNECTED -> Color.Green
                         ConnectionState.NOT_CONNECTED -> Color.Red
                         else -> Color.Gray
                     }
                     Spacer(modifier = Modifier.size(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .background(connectionColor)
-                            .clip(RoundedCornerShape(50))
+                    Icon(
+                        imageVector = connectionIcon,
+                        contentDescription = if (profile.connectionState == ConnectionState.CONNECTED) "Connected" else "Not Connected",
+                        tint = connectionColor,
+                        modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.size(8.dp))
                     Text(
@@ -218,7 +236,7 @@ fun ProfileItem(
                         }
                     }
                     IconButton(onClick = {
-                        isExpanded = !isExpanded
+                        onExpandChange(!isExpanded)
                     }) {
                         Icon(
                             imageVector = if (isExpandedState) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
@@ -232,7 +250,7 @@ fun ProfileItem(
             }
             if (isExpandedState) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(text = "IP: ${profile.ipAddress}")
+                    Text(text = "Address: ${profile.ipAddress}")
                     if (profile.port.isNotEmpty()) {
                         Text(text = "Port: ${profile.port}")
                     }

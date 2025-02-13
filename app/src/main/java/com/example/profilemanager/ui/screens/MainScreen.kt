@@ -1,7 +1,6 @@
 package com.example.profilemanager.ui.screens
 
 import android.net.Uri
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,9 +16,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -54,8 +53,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.profilemanager.data.ConnectionState
 import com.example.profilemanager.data.DataStoreManager
-import com.example.profilemanager.data.NetworkConnectionState
-import com.example.profilemanager.data.NetworkConnectivityManager
 import com.example.profilemanager.data.Profile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,21 +71,13 @@ fun MainScreen(navController: NavController) {
     var bulkRefreshing by remember { mutableStateOf(false) }
     var showPingDialog by remember { mutableStateOf(false) }
 
-    // Initialize NetworkConnectivityManager
-    val networkConnectivityManager = remember { NetworkConnectivityManager(context) }
-    // Collect the network connection state as a state
-    val networkConnectionState by networkConnectivityManager.networkConnectionState.collectAsState(
-        initial = NetworkConnectionState.UNKNOWN
-    )
-
     LaunchedEffect(refreshing) {
         if (refreshing) {
             showRefreshingDialog = true
-            // Refresh each profile individually and update profileToRefresh
             profiles.forEach { profile ->
                 profileToRefresh = profile
                 dataStoreManager.pingProfile(profile)
-                delay(500) // Short delay between each profile refresh
+                delay(500)
             }
             refreshing = false
             showRefreshingDialog = false
@@ -98,11 +87,10 @@ fun MainScreen(navController: NavController) {
     LaunchedEffect(bulkRefreshing) {
         if (bulkRefreshing) {
             showRefreshingDialog = true
-            // Refresh each profile individually and update profileToRefresh
             profiles.forEach { profile ->
                 profileToRefresh = profile
                 dataStoreManager.pingProfile(profile)
-                delay(500) // Short delay between each profile refresh
+                delay(500)
             }
             bulkRefreshing = false
             showRefreshingDialog = false
@@ -114,34 +102,25 @@ fun MainScreen(navController: NavController) {
             TopAppBar(
                 title = {
                     Text(
-                        "Main",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        "Main"
                     )
                 },
                 actions = {
-                    // Network Connection Status Indicator
-                    Row(
+                    Text(
+                        text = "Refresh All",
                         modifier = Modifier
-                            .padding(end = 16.dp)
-                            .align(Alignment.CenterVertically),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        NetworkStatusIndicator(networkConnectionState)
-                    }
-                    Button(onClick = {
-                        bulkRefreshing = true
-                    }) {
-                        Text("Refresh All")
-                    }
+                            .padding(horizontal = 16.dp)
+                            .clickable {
+                                bulkRefreshing = true
+                            },
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        // Use a Box to overlay the network indicator on top of the Column
         Box(modifier = Modifier.fillMaxSize()) {
-            // Main content of the screen
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -180,7 +159,7 @@ fun MainScreen(navController: NavController) {
     }
     if (showRefreshingDialog) {
         AlertDialog(
-            onDismissRequest = { /* Prevent dismissing by tapping outside */ },
+            onDismissRequest = { },
             title = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -199,13 +178,12 @@ fun MainScreen(navController: NavController) {
                 }
             },
             confirmButton = {
-                // No button needed here
             }
         )
     }
     if (showPingDialog) {
         AlertDialog(
-            onDismissRequest = { /* Prevent dismissing by tapping outside */ },
+            onDismissRequest = { },
             title = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -224,7 +202,6 @@ fun MainScreen(navController: NavController) {
                 }
             },
             confirmButton = {
-                // No button needed here
             }
         )
     }
@@ -243,7 +220,6 @@ fun ProfileItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        // In MainScreen.kt, inside the ProfileItem composable, within the clickable block:
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -267,17 +243,21 @@ fun ProfileItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Connection status indicator
+            val connectionIcon = when (profile.connectionState) {
+                ConnectionState.CONNECTED -> Icons.Filled.CheckCircle
+                ConnectionState.NOT_CONNECTED -> Icons.Filled.Error
+                else -> Icons.Filled.Error
+            }
             val connectionColor = when (profile.connectionState) {
                 ConnectionState.CONNECTED -> Color.Green
                 ConnectionState.NOT_CONNECTED -> Color.Red
                 else -> Color.Gray
             }
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(connectionColor)
-                    .clip(RoundedCornerShape(50))
+            Icon(
+                imageVector = connectionIcon,
+                contentDescription = if (profile.connectionState == ConnectionState.CONNECTED) "Connected" else "Not Connected",
+                tint = connectionColor,
+                modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.size(8.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -295,34 +275,5 @@ fun ProfileItem(
                 Icon(Icons.Filled.Refresh, contentDescription = "Ping")
             }
         }
-    }
-}
-
-@Composable
-fun NetworkStatusIndicator(networkConnectionState: NetworkConnectionState) {
-    val connectionText = when (networkConnectionState) {
-        NetworkConnectionState.CONNECTED -> "Connected"
-        NetworkConnectionState.DISCONNECTED -> "Disconnected"
-        NetworkConnectionState.UNKNOWN -> "Unknown"
-    }
-    val icon = when (networkConnectionState) {
-        NetworkConnectionState.CONNECTED -> Icons.Filled.CheckCircle
-        NetworkConnectionState.DISCONNECTED -> Icons.Filled.Error
-        NetworkConnectionState.UNKNOWN -> Icons.Filled.Error
-    }
-    val iconColor = when (networkConnectionState) {
-        NetworkConnectionState.CONNECTED -> Color.Green
-        NetworkConnectionState.DISCONNECTED -> Color.Red
-        NetworkConnectionState.UNKNOWN -> Color.Gray
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = "Network Status",
-            tint = iconColor,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.size(4.dp))
-        Text(text = connectionText, fontSize = 12.sp)
     }
 }

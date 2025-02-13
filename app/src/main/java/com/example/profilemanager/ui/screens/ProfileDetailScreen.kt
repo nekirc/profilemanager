@@ -24,20 +24,28 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.net.http.SslError
+import android.webkit.SslErrorHandler
+import com.example.profilemanager.data.DataStoreManager
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDetailScreen(navController: NavController, url: String, profileName: String) {
+    val dataStoreManager = DataStoreManager(LocalContext.current)
+    val isDarkMode by dataStoreManager.isDarkMode.collectAsState(initial = false)
     val decodedUrl = Uri.decode(url)
     val httpsUrl = decodedUrl
     val httpUrl = decodedUrl.replace("https", "http")
@@ -65,7 +73,11 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
             val encodedHttpsUrl = Uri.encode(httpsUrl)
             val encodedHttpUrl = Uri.encode(httpUrl)
             val encodedProfileName = Uri.encode(profileName)
-            navController.navigate("connectionProblem/$encodedHttpsUrl/$encodedHttpUrl/$encodedProfileName")
+            navController.navigate("connectionProblem/$encodedHttpsUrl/$encodedHttpUrl/$encodedProfileName/$isDarkMode") {
+                popUpTo("profileDetail/$encodedHttpsUrl/$encodedProfileName") {
+                    inclusive = true
+                }
+            }
         }
     }
 
@@ -79,7 +91,7 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
             TopAppBar(
                 title = { Text(profileName) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigate("main") }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -105,6 +117,14 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
                 factory = { context ->
                     WebView(context).apply {
                         webViewClient = object : WebViewClient() {
+                            override fun onReceivedSslError(
+                                view: WebView?,
+                                handler: SslErrorHandler?,
+                                error: SslError?
+                            ) {
+                                Log.e("ProfileDetailScreen", "SSL error: ${error?.toString()}")
+                                handler?.proceed() // Ignore SSL certificate errors
+                            }
                             override fun onReceivedError(
                                 view: WebView?,
                                 request: WebResourceRequest?,
@@ -121,7 +141,11 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
                                         val encodedHttpsUrl = Uri.encode(httpsUrl)
                                         val encodedHttpUrl = Uri.encode(httpUrl)
                                         val encodedProfileName = Uri.encode(profileName)
-                                        navController.navigate("connectionProblem/$encodedHttpsUrl/$encodedHttpUrl/$encodedProfileName")
+                                        navController.navigate("connectionProblem/$encodedHttpsUrl/$encodedHttpUrl/$encodedProfileName/$isDarkMode") {
+                                            popUpTo("profileDetail/$encodedHttpsUrl/$encodedProfileName") {
+                                                inclusive = true
+                                            }
+                                        }
                                     }
                                 }
                                 isLoading.value = false
