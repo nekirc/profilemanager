@@ -38,6 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -73,6 +74,8 @@ fun ProfileListScreen(navController: NavController) {
     var isEditMode by remember { mutableStateOf(false) }
     var allExpanded by remember { mutableStateOf(false) }
     val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
+    val customGreen = Color(0xFF4CAF50)
+    val customBlue = Color(0xFF2196F3)
 
     Scaffold(
         topBar = {
@@ -101,7 +104,9 @@ fun ProfileListScreen(navController: NavController) {
             Column(horizontalAlignment = Alignment.End) {
                 FloatingActionButton(
                     onClick = { isEditMode = !isEditMode },
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    containerColor = customBlue,
+                    contentColor = contentColorFor(backgroundColor = customBlue)
                 ) {
                     Icon(
                         imageVector = if (isEditMode) Icons.Filled.Done else Icons.Filled.Edit,
@@ -109,7 +114,9 @@ fun ProfileListScreen(navController: NavController) {
                     )
                 }
                 FloatingActionButton(
-                    onClick = { navController.navigate("addProfile") }
+                    onClick = { navController.navigate("addProfile") },
+                    containerColor = customGreen,
+                    contentColor = contentColorFor(backgroundColor = customGreen)
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "Add Profile")
                 }
