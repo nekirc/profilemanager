@@ -5,23 +5,19 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.os.Build
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Error
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -35,16 +31,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.profilemanager.data.DataStoreManager
@@ -59,6 +52,7 @@ import com.example.profilemanager.ui.screens.ProfileDetailScreen
 import com.example.profilemanager.ui.screens.ProfileListScreen
 import com.example.profilemanager.ui.screens.SettingsScreen
 import kotlinx.coroutines.delay
+import com.example.profilemanager.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,14 +122,24 @@ fun Navigation(
         topBar = {
             TopAppBar(
                 title = {
-                    Column(modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)) {
-                        Text("Profile Manager")
-                        Row {
-                            Text("Wifi: $wifiState", fontSize = 12.sp)
-                            Spacer(modifier = Modifier.size(8.dp))
-                            Text("Mobile Data: $mobileDataState", fontSize = 12.sp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_app),
+                            contentDescription = "Logo",
+                            modifier = Modifier
+                                .size(48.dp)
+                                .padding(end = 8.dp)
+                        )
+                        Column(modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)) {
+                            Text("Profile Manager")
+                            Row {
+                                Text("Wifi: $wifiState", fontSize = 12.sp)
+                                Spacer(modifier = Modifier.size(8.dp))
+                                Text("Mobile Data: $mobileDataState", fontSize = 12.sp)
+                            }
                         }
-                        // NetworkStatusIndicator(networkConnectionState)
                     }
                 },
                 actions = {

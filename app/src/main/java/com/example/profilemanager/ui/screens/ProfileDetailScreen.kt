@@ -3,8 +3,10 @@ package com.example.profilemanager.ui.screens
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.util.Log
+import android.webkit.CookieManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Column
@@ -55,7 +57,6 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
     val webView = remember { mutableStateOf<WebView?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
     // Show loading snackbar when isLoading changes to true
     LaunchedEffect(isLoading.value) {
         if (isLoading.value) {
@@ -80,7 +81,6 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
             }
         }
     }
-
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
@@ -155,9 +155,33 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
                                 super.onPageFinished(view, url)
                                 isPageLoaded.value = true
                                 isLoading.value = false
+                                // Inject JavaScript to catch errors
+                                view?.evaluateJavascript("""
+                                    window.onerror = function(message, source, lineno, colno, error) {
+                                        console.error("JavaScript Error:", message, source, lineno, colno, error);
+                                        // You could also send this error to your app using a JavaScript interface
+                                        return true; // Prevent default error handling
+                                    };
+                                """, null)
                             }
                         }
                         settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.javaScriptCanOpenWindowsAutomatically = true
+                        settings.setSupportMultipleWindows(true)
+                        settings.setSupportZoom(true)
+                        settings.builtInZoomControls = true
+                        settings.allowFileAccess = true
+                        settings.allowContentAccess = true
+                        settings.databaseEnabled = true
+                        settings.setGeolocationEnabled(true)
+                        settings.loadsImagesAutomatically = true
+                        settings.loadWithOverviewMode = true
+                        settings.useWideViewPort = true
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        val cookieManager = CookieManager.getInstance()
+                        cookieManager.setAcceptCookie(true)
+                        cookieManager.setAcceptThirdPartyCookies(this, true)
                         setBackgroundColor(Color.Transparent.hashCode())
                         loadUrl(decodedUrl)
                         webView.value = this

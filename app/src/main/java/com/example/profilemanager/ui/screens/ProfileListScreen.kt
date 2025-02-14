@@ -40,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -60,6 +61,7 @@ import androidx.navigation.NavController
 import com.example.profilemanager.data.ConnectionState
 import com.example.profilemanager.data.DataStoreManager
 import com.example.profilemanager.data.Profile
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,6 +78,15 @@ fun ProfileListScreen(navController: NavController) {
     val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
     val customGreen = Color(0xFF4CAF50)
     val customBlue = Color(0xFF2196F3)
+    val systemUiController = rememberSystemUiController()
+    val isDarkTheme by dataStoreManager.isDarkMode.collectAsState(initial = false)
+
+    LaunchedEffect(systemUiController, isDarkTheme) {
+        systemUiController.setStatusBarColor(
+            color = Color.Transparent,
+            darkIcons = !isDarkTheme
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -257,7 +268,7 @@ fun ProfileItem(
             }
             if (isExpandedState) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(text = "Address: ${profile.ipAddress}")
+                    Text(text = "${profile.ipAddress}")
                     if (profile.port.isNotEmpty()) {
                         Text(text = "Port: ${profile.port}")
                     }

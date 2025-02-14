@@ -1,5 +1,6 @@
 package com.example.profilemanager.ui.screens
 
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Web
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -56,10 +58,16 @@ import com.example.profilemanager.data.DataStoreManager
 import com.example.profilemanager.data.Profile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(navController: NavController) {
+    val systemUiController = rememberSystemUiController()
     val context = LocalContext.current
     val dataStoreManager = DataStoreManager(context)
     val coroutineScope = rememberCoroutineScope()
@@ -70,7 +78,16 @@ fun MainScreen(navController: NavController) {
     var profileToRefresh by remember { mutableStateOf<Profile?>(null) }
     var bulkRefreshing by remember { mutableStateOf(false) }
     var showPingDialog by remember { mutableStateOf(false) }
+    var showProfileOptionsDialog by remember { mutableStateOf(false) }
+    var selectedProfile by remember { mutableStateOf<Profile?>(null) }
 
+    val isDarkTheme by dataStoreManager.isDarkMode.collectAsState(initial = false)
+    LaunchedEffect(systemUiController, isDarkTheme) {
+        systemUiController.setStatusBarColor(
+            color = Color.Transparent,
+            darkIcons = !isDarkTheme
+        )
+    }
     LaunchedEffect(refreshing) {
         if (refreshing) {
             showRefreshingDialog = true
@@ -150,6 +167,9 @@ fun MainScreen(navController: NavController) {
                                     showPingDialog = false
                                     profileToRefresh = null
                                 }
+                            }, onProfileClicked = {
+                                showProfileOptionsDialog = true
+                                selectedProfile = it
                             })
                         }
                     }
@@ -161,12 +181,14 @@ fun MainScreen(navController: NavController) {
         AlertDialog(
             onDismissRequest = { },
             title = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text("Refreshing profiles...")
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text("Refreshing profiles...")
+                    }
                 }
             },
             text = {
@@ -185,12 +207,14 @@ fun MainScreen(navController: NavController) {
         AlertDialog(
             onDismissRequest = { },
             title = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text("Pinging profile...")
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text("Pinging profile...")
+                    }
                 }
             },
             text = {
@@ -205,40 +229,96 @@ fun MainScreen(navController: NavController) {
             }
         )
     }
+    if (showProfileOptionsDialog) {
+        AlertDialog(
+            onDismissRequest = { showProfileOptionsDialog = false },
+            icon = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.Web,
+                        contentDescription = "Webpage",
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+            },
+            title = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(text = "Open profile in...", textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Choose how you want to open the profile")
+                }
+            },
+            confirmButton = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Button(onClick = {
+                        showProfileOptionsDialog = false
+                        if (selectedProfile != null) {
+                            val httpsUrl = if (selectedProfile!!.port.isNotEmpty()) {
+                                "https://${selectedProfile!!.ipAddress}:${selectedProfile!!.port}"
+                            } else {
+                                "https://${selectedProfile!!.ipAddress}"
+                            }
+                            val encodedHttpsUrl = Uri.encode(httpsUrl)
+                            val encodedProfileName = Uri.encode(selectedProfile!!.name)
+                            navController.navigate("profileDetail/$encodedHttpsUrl/$encodedProfileName")
+                        }
+                    }) {
+                        Text("Internal WebView")
+                    }
+                }
+            },
+            dismissButton = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Button(onClick = {
+                        showProfileOptionsDialog = false
+                        if (selectedProfile != null) {
+                            val httpsUrl = if (selectedProfile!!.port.isNotEmpty()) {
+                                "https://${selectedProfile!!.ipAddress}:${selectedProfile!!.port}"
+                            } else {
+                                "https://${selectedProfile!!.ipAddress}"
+                            }
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(httpsUrl))
+                            context.startActivity(intent)
+                        }
+                    }) {
+                        Text("External Browser")
+                    }
+                }
+            }
+        )
+    }
 }
 @Composable
 fun ProfileItem(
     profile: Profile,
     navController: NavController,
-    onPingClicked: () -> Unit
+    onPingClicked: () -> Unit,
+    onProfileClicked: (Profile) -> Unit
 ) {
+    val gradientBrush = Brush.horizontalGradient(
+        colors = listOf(
+            Color.Gray.copy(alpha = 0.2f), // Start with a light gray
+            Color.Transparent // End with transparent
+        )
+    )
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            .clip(RoundedCornerShape(16.dp))
+            .background(gradientBrush), // Apply the gradient here
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), // Set elevation to 0
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent) // Make the card background transparent
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
                 .clickable {
-                    val httpsUrl = if (profile.port.isNotEmpty()) {
-                        "https://${profile.ipAddress}:${profile.port}"
-                    } else {
-                        "https://${profile.ipAddress}"
-                    }
-                    val httpUrl = if (profile.port.isNotEmpty()) {
-                        "http://${profile.ipAddress}:${profile.port}"
-                    } else {
-                        "http://${profile.ipAddress}"
-                    }
-                    val encodedHttpsUrl = Uri.encode(httpsUrl)
-                    val encodedHttpUrl = Uri.encode(httpUrl)
-                    val encodedProfileName = Uri.encode(profile.name)
-                    navController.navigate("profileDetail/$encodedHttpsUrl/$encodedProfileName")
+                    onProfileClicked(profile)
                 },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
