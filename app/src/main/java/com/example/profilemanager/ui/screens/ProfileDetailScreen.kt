@@ -6,6 +6,7 @@ import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -125,6 +126,7 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
                                 Log.e("ProfileDetailScreen", "SSL error: ${error?.toString()}")
                                 handler?.proceed() // Ignore SSL certificate errors
                             }
+
                             override fun onReceivedError(
                                 view: WebView?,
                                 request: WebResourceRequest?,
@@ -150,7 +152,6 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
                                 }
                                 isLoading.value = false
                             }
-
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 isPageLoaded.value = true
@@ -163,6 +164,21 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
                                         return true; // Prevent default error handling
                                     };
                                 """, null)
+                            }
+                            override fun shouldInterceptRequest(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): WebResourceResponse? {
+                                Log.d("ProfileDetailScreen", "Intercepting request: ${request?.url}")
+                                return super.shouldInterceptRequest(view, request)
+                            }
+                            override fun onReceivedHttpError(
+                                view: WebView?,
+                                request: WebResourceRequest?,
+                                errorResponse: WebResourceResponse?
+                            ) {
+                                Log.e("ProfileDetailScreen", "HTTP error: ${errorResponse?.statusCode} for ${request?.url}")
+                                super.onReceivedHttpError(view, request, errorResponse)
                             }
                         }
                         settings.javaScriptEnabled = true
@@ -183,6 +199,8 @@ fun ProfileDetailScreen(navController: NavController, url: String, profileName: 
                         cookieManager.setAcceptCookie(true)
                         cookieManager.setAcceptThirdPartyCookies(this, true)
                         setBackgroundColor(Color.Transparent.hashCode())
+                        // Clear cache
+                        clearCache(true)
                         loadUrl(decodedUrl)
                         webView.value = this
                     }

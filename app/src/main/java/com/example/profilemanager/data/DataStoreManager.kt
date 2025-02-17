@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,8 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.InetAddress
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
@@ -42,8 +45,10 @@ class DataStoreManager(private val context: Context) {
         fun profileLastCheckedKey(id: Int) = stringPreferencesKey("profile_last_checked_$id")
         fun profileOrderKey(id: Int) = intPreferencesKey("profile_order_$id")
         fun profileIconNameKey(id: Int) = stringPreferencesKey("profile_icon_name_$id")
+        // New keys for daily data
+        fun dailyBytesSentKey(date: LocalDate) = longPreferencesKey("daily_bytes_sent_${date.format(DateTimeFormatter.ISO_DATE)}")
+        fun dailyBytesReceivedKey(date: LocalDate) = longPreferencesKey("daily_bytes_received_${date.format(DateTimeFormatter.ISO_DATE)}")
     }
-
     val isDarkMode: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[DARK_MODE_KEY] ?: false
@@ -128,7 +133,6 @@ class DataStoreManager(private val context: Context) {
                 emit(profiles.sortedBy { it.order })
             }
     }
-
     suspend fun addProfile(profile: Profile) {
         context.dataStore.edit { preferences ->
             val currentId = preferences[PROFILE_ID_COUNTER] ?: 0
@@ -196,6 +200,23 @@ class DataStoreManager(private val context: Context) {
             preferences[profileOrderKey(profile.id)] = profile.order
         }
     }
+    // New functions for daily data
+    suspend fun saveDailyData(date: LocalDate, bytesSent: Long, bytesReceived: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[dailyBytesSentKey(date)] = bytesSent
+            preferences[dailyBytesReceivedKey(date)] = bytesReceived
+        }
+    }
+
+    suspend fun getDailyData(date: LocalDate): Pair<Long, Long> {
+        return context.dataStore.data
+            .map { preferences ->
+                val sent = preferences[dailyBytesSentKey(date)] ?: 0L
+                val received = preferences[dailyBytesReceivedKey(date)] ?: 0L
+                Pair(sent, received)
+            }
+            .firstOrNull() ?: Pair(0L, 0L)
+    }
 
     private fun getCurrentTimestamp(): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
@@ -215,4 +236,3 @@ class DataStoreManager(private val context: Context) {
         }
     }
 }
-

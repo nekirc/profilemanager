@@ -69,6 +69,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.7")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("com.google.accompanist:accompanist-pager:0.33.2-alpha")
+    implementation("com.google.accompanist:accompanist-pager-indicators:0.33.2-alpha")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
