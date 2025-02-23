@@ -22,8 +22,16 @@ fun ConnectionProblemScreen(
     navController: NavController,
     profileName: String,
     httpsUrl: String,
-    httpUrl: String
+    httpUrl: String,
+    isDarkMode: Boolean // Add this parameter
 ) {
+    // Use the passed isDarkMode value
+    val imageResource = if (isDarkMode) {
+        R.drawable.funny_404_dark
+    } else {
+        R.drawable.funny_404_light
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -32,7 +40,7 @@ fun ConnectionProblemScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.funny_404), // Replace with your image resource
+            painter = painterResource(id = imageResource),
             contentDescription = "Funny 404",
             modifier = Modifier
                 .size(200.dp)
@@ -43,11 +51,7 @@ fun ConnectionProblemScreen(
         Button(onClick = {
             val encodedHttpsUrl = Uri.encode(httpsUrl)
             val encodedProfileName = Uri.encode(profileName)
-            navController.navigate("profileDetail/$encodedHttpsUrl/$encodedProfileName") {
-                popUpTo("connectionProblem/$encodedHttpsUrl/$httpUrl/$encodedProfileName") {
-                    inclusive = true
-                }
-            }
+            navController.navigate("profileDetail/$encodedHttpsUrl/$encodedProfileName")
         }) {
             Text(text = "Retry")
         }
